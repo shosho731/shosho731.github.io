@@ -1,0 +1,20 @@
+{
+  "name": "osero-online",
+  "version": "1.0.0",
+  "description": "オセロ - オフライン/オンライン対戦（Node.js + Socket.io）",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "index:mini-search": "node Proxy/search/buildIndex.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "lunr": "^2.3.9",
+    "node-html-parser": "^6.1.13",
+    "express": "^4.21.0",
+    "socket.io": "^4.7.4"
+  }
+}

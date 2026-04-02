@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>オセロ</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #2e7d32 0, #0b1a0c 55%, #020403 100%);
+      color: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .app-container {
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 18px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6);
+      padding: 18px 22px 22px;
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 20px;
+      letter-spacing: 0.1em;
+      text-align: center;
+    }
+
+    .view {
+      width: fit-content;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .mode-subtitle {
+      margin-top: 4px;
+      font-size: 12px;
+      opacity: 0.8;
+      text-align: center;
+    }
+
+    .mode-buttons {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .mode-btn {
+      padding: 10px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      text-align: left;
+      transition: background-color 0.12s ease-out, transform 0.08s ease-out, box-shadow 0.12s ease-out;
+    }
+
+    .mode-btn:hover {
+      background: rgba(255, 255, 255, 0.10);
+      transform: translateY(-0.5px);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .mode-btn:active {
+      transform: translateY(0.5px);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    .mode-title {
+      font-weight: 800;
+      letter-spacing: 0.05em;
+    }
+
+    .mode-desc {
+      margin-top: 4px;
+      font-size: 12px;
+      opacity: 0.78;
+      line-height: 1.45;
+    }
+
+    .toast {
+      margin-top: 10px;
+      font-size: 12px;
+      opacity: 0.9;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 193, 7, 0.08);
+      border: 1px solid rgba(255, 193, 7, 0.35);
+      color: #ffe7a3;
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+
+    .score {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .score-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .disc-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25) inset;
+    }
+
+    .disc-black {
+      background: #111;
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.7) inset,
+        0 2px 3px rgba(0, 0, 0, 0.9);
+    }
+
+    .disc-white {
+      background: #fafafa;
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.25) inset,
+        0 2px 3px rgba(0, 0, 0, 0.6);
+    }
+
+    .turn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(76, 175, 80, 0.1);
+      border: 1px solid rgba(76, 175, 80, 0.4);
+      font-weight: 600;
+    }
+
+    .status {
+      font-size: 12px;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    .board-wrapper {
+      position: relative;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, 52px);
+      grid-template-rows: repeat(8, 52px);
+      background-color: #2e7d32;
+      border-radius: 12px;
+      box-shadow:
+        0 0 0 2px #1b5e20,
+        0 14px 26px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+      position: relative;
+      user-select: none;
+    }
+
+    .cell {
+      position: relative;
+      border: 1px solid #1b5e20;
+      box-sizing: border-box;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.12s ease-out;
+    }
+
+    .cell:hover {
+      background-color: rgba(255, 255, 255, 0.04);
+    }
+
+    .cell.disabled {
+      cursor: default;
+    }
+
+    .piece {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      transition:
+        transform 0.15s ease-out,
+        box-shadow 0.18s ease-out,
+        background-color 0.18s ease-out;
+      transform: translateY(-1px);
+    }
+
+    .piece-black {
+      background: radial-gradient(circle at 20% 20%, #444 0, #050505 60%, #000 100%);
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.9),
+        0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    }
+
+    .piece-white {
+      background: radial-gradient(circle at 20% 20%, #fff 0, #d9d9d9 55%, #bcbcbc 100%);
+      box-shadow:
+        0 2px 3px rgba(0, 0, 0, 0.8),
+        0 0 0 1px rgba(0, 0, 0, 0.35) inset;
+    }
+
+    .piece.flip {
+      animation: flip 0.22s ease-out;
+      transform-origin: center;
+    }
+
+    @keyframes flip {
+      0% {
+        transform: rotateY(0deg) translateY(-1px);
+      }
+      50% {
+        transform: rotateY(90deg) translateY(-1px);
+      }
+      100% {
+        transform: rotateY(180deg) translateY(-1px);
+      }
+    }
+
+    .hint-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4caf50;
+      box-shadow: 0 0 0 1px #1b5e20, 0 0 6px rgba(76, 175, 80, 0.7);
+      opacity: 0.7;
+    }
+
+    .controls {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      opacity: 0.85;
+    }
+
+    button {
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.04);
+      color: inherit;
+      padding: 4px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      transition:
+        background-color 0.12s ease-out,
+        transform 0.08s ease-out,
+        box-shadow 0.12s ease-out;
+    }
+
+    button:hover {
+      background: rgba(255, 255, 255, 0.09);
+      transform: translateY(-0.5px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+    }
+
+    button:active {
+      transform: translateY(0.5px);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    a {
+      color: #81c784;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 520px) {
+      .board {
+        transform: scale(0.9);
+        transform-origin: top center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- モード選択 -->
+  <div class="app-container view" id="modeView">
+    <h1>オセロ</h1>
+    <div class="mode-subtitle">最初にモードを選んでください。</div>
+    <div class="mode-buttons">
+      <div class="mode-btn" id="offlineBtn" role="button" tabindex="0">
+        <div class="mode-title">オフライン</div>
+        <div class="mode-desc">この端末だけで遊ぶ（2人で交互にプレイ）。今の画面のまま遊べます。</div>
+      </div>
+      <div class="mode-btn" id="onlineBtn" role="button" tabindex="0">
+        <div class="mode-title">オンライン</div>
+        <div class="mode-desc">ネット対戦（後で実装）。</div>
+      </div>
+    </div>
+    <div class="toast hidden" id="modeToast">オンラインは準備中です。今はオフラインを選んでください。</div>
+  </div>
+
+  <!-- ゲーム画面（オフライン） -->
+  <div class="app-container view hidden" id="gameView">
+    <h1>オセロ（オフライン）</h1>
+    <div class="meta">
+      <div class="score" id="score">
+        <span class="score-pill">
+          <span class="disc-icon disc-black"></span>
+          黒: <span id="blackScore">2</span>
+        </span>
+        <span class="score-pill">
+          <span class="disc-icon disc-white"></span>
+          白: <span id="whiteScore">2</span>
+        </span>
+      </div>
+      <div class="turn" id="turnLabel">
+        <span class="disc-icon disc-black"></span>
+        黒の番
+      </div>
+    </div>
+    <div class="status" id="statusText">
+      有効なマスをクリックして石を置いてください。
+    </div>
+
+    <div class="board-wrapper">
+      <div class="board" id="board"></div>
+    </div>
+
+    <div class="controls">
+      <div>
+        2人対戦（同じ画面で交互にプレイ）
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="backBtn" title="モード選択に戻る">戻る</button>
+        <button id="resetBtn">リセット</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BOARD_SIZE = 8;
+    const EMPTY = 0;
+    const BLACK = 1;
+    const WHITE = -1;
+
+    const DIRECTIONS = [
+      [-1, -1], [-1, 0], [-1, 1],
+      [0, -1],          [0, 1],
+      [1, -1],  [1, 0], [1, 1],
+    ];
+
+    const state = {
+      board: [],
+      currentPlayer: BLACK,
+      gameOver: false,
+    };
+
+    const boardEl = document.getElementById("board");
+    const blackScoreEl = document.getElementById("blackScore");
+    const whiteScoreEl = document.getElementById("whiteScore");
+    const turnLabelEl = document.getElementById("turnLabel");
+    const statusTextEl = document.getElementById("statusText");
+    const resetBtn = document.getElementById("resetBtn");
+    const backBtn = document.getElementById("backBtn");
+
+    const modeView = document.getElementById("modeView");
+    const gameView = document.getElementById("gameView");
+    const offlineBtn = document.getElementById("offlineBtn");
+    const onlineBtn = document.getElementById("onlineBtn");
+    const modeToast = document.getElementById("modeToast");
+
+    let boardDomCreated = false;
+
+    function initBoardState() {
+      state.board = Array.from({ length: BOARD_SIZE }, () =>
+        Array.from({ length: BOARD_SIZE }, () => EMPTY)
+      );
+      const mid = BOARD_SIZE / 2;
+      state.board[mid - 1][mid - 1] = WHITE;
+      state.board[mid - 1][mid] = BLACK;
+      state.board[mid][mid - 1] = BLACK;
+      state.board[mid][mid] = WHITE;
+      state.currentPlayer = BLACK;
+      state.gameOver = false;
+    }
+
+    function createBoardDom() {
+      boardEl.innerHTML = "";
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.addEventListener("click", onCellClick);
+          boardEl.appendChild(cell);
+        }
+      }
+    }
+
+    function isValidMove(row, col, player) {
+      if (state.board[row][col] !== EMPTY) return false;
+
+      for (const [dr, dc] of DIRECTIONS) {
+        let r = row + dr;
+        let c = col + dc;
+        let foundOpponent = false;
+
+        while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+          const cell = state.board[r][c];
+          if (cell === EMPTY) break;
+          if (cell === player) {
+            if (foundOpponent) return true;
+            break;
+          }
+          foundOpponent = true;
+          r += dr;
+          c += dc;
+        }
+      }
+      return false;
+    }
+
+    function getValidMoves(player) {
+      const moves = [];
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          if (isValidMove(r, c, player)) {
+            moves.push([r, c]);
+          }
+        }
+      }
+      return moves;
+    }
+
+    function makeMove(row, col, player) {
+      if (!isValidMove(row, col, player)) return false;
+
+      state.board[row][col] = player;
+      const opponent = -player;
+
+      for (const [dr, dc] of DIRECTIONS) {
+        let r = row + dr;
+        let c = col + dc;
+        const toFlip = [];
+
+        while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+          const cell = state.board[r][c];
+          if (cell === EMPTY) break;
+          if (cell === opponent) {
+            toFlip.push([r, c]);
+            r += dr;
+            c += dc;
+          } else if (cell === player) {
+            if (toFlip.length > 0) {
+              for (const [fr, fc] of toFlip) {
+                state.board[fr][fc] = player;
+              }
+            }
+            break;
+          } else {
+            break;
+          }
+        }
+      }
+      return true;
+    }
+
+    function getScore() {
+      let black = 0;
+      let white = 0;
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          if (state.board[r][c] === BLACK) black++;
+          if (state.board[r][c] === WHITE) white++;
+        }
+      }
+      return { black, white };
+    }
+
+    function playTurn(row, col) {
+      if (state.gameOver) return;
+
+      const validMoves = getValidMoves(state.currentPlayer);
+      if (validMoves.length === 0) {
+        state.currentPlayer = -state.currentPlayer;
+        const nextMoves = getValidMoves(state.currentPlayer);
+        if (nextMoves.length === 0) {
+          state.gameOver = true;
+        }
+        return;
+      }
+
+      if (!isValidMove(row, col, state.currentPlayer)) {
+        statusTextEl.textContent = "そこには置けません。ハイライトされたマスを選んでください。";
+        return;
+      }
+
+      makeMove(row, col, state.currentPlayer);
+      state.currentPlayer = -state.currentPlayer;
+
+      const nextMoves = getValidMoves(state.currentPlayer);
+      if (nextMoves.length === 0) {
+        state.currentPlayer = -state.currentPlayer;
+        const againMoves = getValidMoves(state.currentPlayer);
+        if (againMoves.length === 0) {
+          state.gameOver = true;
+        } else {
+          statusTextEl.textContent = "相手はパスです。同じプレイヤーの番が続きます。";
+        }
+      } else {
+        statusTextEl.textContent = "有効なマスをクリックして石を置いてください。";
+      }
+    }
+
+    function renderBoard() {
+      const cells = boardEl.children;
+      const validMoves = getValidMoves(state.currentPlayer);
+      const validSet = new Set(validMoves.map(([r, c]) => `${r},${c}`));
+
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          const idx = r * BOARD_SIZE + c;
+          const cellEl = cells[idx];
+          cellEl.innerHTML = "";
+          cellEl.classList.remove("disabled");
+
+          const value = state.board[r][c];
+          if (value !== EMPTY) {
+            const piece = document.createElement("div");
+            piece.className = "piece " + (value === BLACK ? "piece-black" : "piece-white");
+            cellEl.appendChild(piece);
+          } else if (!state.gameOver && validSet.has(`${r},${c}`)) {
+            const hint = document.createElement("div");
+            hint.className = "hint-dot";
+            cellEl.appendChild(hint);
+          }
+        }
+      }
+
+      const { black, white } = getScore();
+      blackScoreEl.textContent = black;
+      whiteScoreEl.textContent = white;
+
+      if (state.gameOver) {
+        for (const cell of cells) {
+          cell.classList.add("disabled");
+        }
+        if (black > white) {
+          turnLabelEl.innerHTML = '<span class="disc-icon disc-black"></span> 黒の勝ち！';
+          statusTextEl.textContent = `ゲーム終了：黒 ${black} - 白 ${white}`;
+        } else if (white > black) {
+          turnLabelEl.innerHTML = '<span class="disc-icon disc-white"></span> 白の勝ち！';
+          statusTextEl.textContent = `ゲーム終了：黒 ${black} - 白 ${white}`;
+        } else {
+          turnLabelEl.textContent = "引き分け！";
+          statusTextEl.textContent = `ゲーム終了：黒 ${black} - 白 ${white}`;
+        }
+      } else {
+        const isBlack = state.currentPlayer === BLACK;
+        turnLabelEl.innerHTML = `<span class="disc-icon ${isBlack ? "disc-black" : "disc-white"}"></span> ${
+          isBlack ? "黒" : "白"
+        }の番`;
+      }
+    }
+
+    function onCellClick(event) {
+      const cell = event.currentTarget;
+      if (state.gameOver) return;
+      const row = Number(cell.dataset.row);
+      const col = Number(cell.dataset.col);
+      const before = JSON.stringify(state.board);
+
+      playTurn(row, col);
+      const after = JSON.stringify(state.board);
+
+      renderBoard();
+
+      if (before !== after) {
+        const piece = cell.querySelector(".piece");
+        if (piece) {
+          piece.classList.add("flip");
+          setTimeout(() => piece.classList.remove("flip"), 260);
+        }
+      }
+    }
+
+    function resetGame() {
+      initBoardState();
+      statusTextEl.textContent = "有効なマスをクリックして石を置いてください。";
+      renderBoard();
+    }
+
+    function showModeView() {
+      modeToast.classList.add("hidden");
+      modeView.classList.remove("hidden");
+      gameView.classList.add("hidden");
+    }
+
+    function showGameViewOffline() {
+      modeView.classList.add("hidden");
+      gameView.classList.remove("hidden");
+
+      if (!boardDomCreated) {
+        createBoardDom();
+        boardDomCreated = true;
+      }
+      resetGame();
+    }
+
+    function onKeyActivate(handler) {
+      return (e) => {
+        if (e.type === "click") return handler(e);
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handler(e);
+        }
+      };
+    }
+
+    offlineBtn.addEventListener("click", showGameViewOffline);
+    offlineBtn.addEventListener("keydown", onKeyActivate(showGameViewOffline));
+
+    onlineBtn.addEventListener("click", () => {
+      modeToast.classList.remove("hidden");
+    });
+    onlineBtn.addEventListener("keydown", onKeyActivate(() => {
+      modeToast.classList.remove("hidden");
+    }));
+
+    resetBtn.addEventListener("click", resetGame);
+    backBtn.addEventListener("click", showModeView);
+
+    // 初期表示はモード選択
+    initBoardState();
+    showModeView();
+  </script>
+</body>
+</html>
+
